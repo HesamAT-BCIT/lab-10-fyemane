@@ -8,23 +8,16 @@ import pytest
 
 @pytest.fixture
 def mock_firestore(monkeypatch):
-    """Starter Firestore mock fixture.
-
-    This injects a fake `firebase` module before app import so tests do not
-    require real Firebase credentials or network access.
-    """
+    """Mock firebase.db before app import so tests never hit real Firebase."""
     mock_db = MagicMock(name="mock_db")
     mock_collection = MagicMock(name="mock_collection")
     mock_doc_ref = MagicMock(name="mock_doc_ref")
     mock_snapshot = MagicMock(name="mock_snapshot")
 
-    # Default chain used by routes/helpers:
-    # db.collection(...).document(...).get()/set()/update()/delete()
     mock_db.collection.return_value = mock_collection
     mock_collection.document.return_value = mock_doc_ref
     mock_doc_ref.get.return_value = mock_snapshot
 
-    # Default profile response; customize per test when needed.
     mock_snapshot.exists = True
     mock_snapshot.to_dict.return_value = {
         "first_name": "Test",
@@ -36,6 +29,21 @@ def mock_firestore(monkeypatch):
     fake_firebase_module.db = mock_db
     monkeypatch.setitem(sys.modules, "firebase", fake_firebase_module)
 
+    # Force a fresh import path so modules pick up mocked firebase
+    for module_name in [
+        "app",
+        "blueprints.api",
+        "blueprints.api.routes",
+        "blueprints.auth",
+        "blueprints.auth.routes",
+        "blueprints.dashboard",
+        "blueprints.dashboard.routes",
+        "blueprints.profile",
+        "blueprints.profile.routes",
+        "utils.profile",
+    ]:
+        sys.modules.pop(module_name, None)
+
     return {
         "db": mock_db,
         "collection": mock_collection,
@@ -46,7 +54,7 @@ def mock_firestore(monkeypatch):
 
 @pytest.fixture
 def client(monkeypatch, mock_firestore):
-    """Flask test client fixture with TESTING enabled."""
+    """Flask test client with TESTING enabled."""
     monkeypatch.setenv("SENSOR_API_KEY", "test-sensor-key")
 
     app_module = importlib.import_module("app")
@@ -58,7 +66,7 @@ def client(monkeypatch, mock_firestore):
 
 @pytest.fixture
 def mock_firebase_auth(monkeypatch):
-    """Patch JWT verification to return a known test uid by default."""
+    """Mock JWT verification to return a known uid."""
     verify_mock = MagicMock(return_value={"uid": "test_user_123"})
     monkeypatch.setattr("decorators.auth.auth.verify_id_token", verify_mock)
     return verify_mock
