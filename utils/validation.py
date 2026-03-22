@@ -3,24 +3,28 @@ from __future__ import annotations
 from flask import jsonify, request
 
 
-def validate_profile_data(first_name: str, last_name: str, student_id: str):
-    """Validate that required profile fields are present and well-formed."""
-    if not first_name or not last_name or not student_id:
+def validate_profile_data(first_name, last_name, student_id):
+    """Validate required profile fields."""
+    if not first_name or not str(first_name).strip():
+        return "All fields are required."
+    if not last_name or not str(last_name).strip():
+        return "All fields are required."
+    if not student_id or not str(student_id).strip():
         return "All fields are required."
     return None
 
 
-def normalize_profile_data(first_name: str, last_name: str, student_id: str):
-    """Normalize profile field values (strip whitespace, stringify student_id)."""
+def normalize_profile_data(first_name, last_name, student_id):
+    """Normalize profile fields for storage."""
     return {
-        "first_name": first_name.strip() if first_name else "",
-        "last_name": last_name.strip() if last_name else "",
-        "student_id": str(student_id).strip() if student_id else "",
+        "first_name": str(first_name).strip() if first_name is not None else "",
+        "last_name": str(last_name).strip() if last_name is not None else "",
+        "student_id": str(student_id).strip() if student_id is not None else "",
     }
 
 
 def require_json_content_type():
-    """Ensure the request is JSON; returns an error response tuple if not."""
+    """Ensure request content type is JSON."""
     if not request.is_json:
         return jsonify({"error": "Content-Type must be application/json"}), 415
     return None
